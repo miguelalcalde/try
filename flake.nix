@@ -82,7 +82,7 @@
 
           meta = with pkgs.lib; {
             description = "Fresh directories for every vibe - lightweight experiments for people with ADHD";
-            homepage = "https://github.com/tobi/try";
+            homepage = "https://github.com/miguelalcalde/try";
             license = licenses.mit;
             maintainers = [ ];
             platforms = platforms.unix;

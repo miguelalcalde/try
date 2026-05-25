@@ -23,7 +23,7 @@ Instantly navigate through all your experiment directories with:
 ## Quick Start
 
 ```bash
-curl -sL https://raw.githubusercontent.com/tobi/try/refs/heads/main/try.rb > ~/.local/try.rb
+curl -sL https://raw.githubusercontent.com/miguelalcalde/try/refs/heads/main/try.rb > ~/.local/try.rb
 
 # Make "try" executable so it can be run directly
 chmod +x ~/.local/try.rb
@@ -125,20 +125,20 @@ Notes on worktrees (`try .` / `try worktree dir`):
 
 ```bash
 # Clone with auto-generated directory name
-try clone https://github.com/tobi/try.git
-# Creates: 2025-08-27-tobi-try
+try clone https://github.com/miguelalcalde/try.git
+# Creates: 2025-08-27-miguelalcalde-try
 
 # Clone with custom name
-try clone https://github.com/tobi/try.git my-fork
+try clone https://github.com/miguelalcalde/try.git my-fork
 # Creates: my-fork
 
 # Shorthand syntax (no need to type 'clone')
-try https://github.com/tobi/try.git
-# Creates: 2025-08-27-tobi-try
+try https://github.com/miguelalcalde/try.git
+# Creates: 2025-08-27-miguelalcalde-try
 
 # Optional GitHub owner/repo layout
-TRY_GH_ROOT=~/github try clone https://github.com/tobi/try.git
-# Creates: ~/github/tobi/try
+TRY_GH_ROOT=~/github try clone https://github.com/miguelalcalde/try.git
+# Creates: ~/github/miguelalcalde/try
 ```
 
 Supported git URI formats:
@@ -176,16 +176,16 @@ Default: `~/src/tries`
 ### Quick start
 
 ```bash
-nix run github:tobi/try
-nix run github:tobi/try -- --help
-nix run github:tobi/try init ~/my-tries
+nix run github:miguelalcalde/try
+nix run github:miguelalcalde/try -- --help
+nix run github:miguelalcalde/try init ~/my-tries
 ```
 
 ### Home Manager
 
 ```nix
 {
-  inputs.try.url = "github:tobi/try";
+  inputs.try.url = "github:miguelalcalde/try";
   
   imports = [ inputs.try.homeManagerModules.default ];
   
@@ -198,7 +198,9 @@ nix run github:tobi/try init ~/my-tries
 
 ## Homebrew
 
-### Quick start
+This fork does not currently publish a Homebrew tap. Use the `curl` or Nix installation methods above for installs that come directly from `miguelalcalde/try`.
+
+Upstream Homebrew install:
 
 ```bash
 brew tap tobi/try
