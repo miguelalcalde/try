@@ -547,6 +547,9 @@ class TrySelector
           # Exit delete mode if no more marks
           @delete_mode = false if @marked_for_deletion.empty?
         end
+      when "\x14"  # Ctrl-T - create new try (immediate)
+        handle_create_new
+        break if @selected
       when "\x03", "\e"  # Ctrl-C or ESC
         if @delete_mode
           # Exit delete mode, clear marks
@@ -767,7 +770,7 @@ class TrySelector
       count = @marked_for_deletion.length
       UI.puts "{strike} DELETE MODE {/strike} #{count} marked  |  Ctrl-D: Toggle  Enter: Confirm  Esc: Cancel"
     else
-      UI.puts "{dim}↑↓: Navigate  Enter: Select  Ctrl-D: Delete  Esc: Cancel{/fg}"
+      UI.puts "{dim}↑↓: Navigate  Enter: Select  Ctrl-T: New  Ctrl-D: Delete  Esc: Cancel{/fg}"
     end
 
     # Flush the double buffer
@@ -897,34 +900,26 @@ class TrySelector
 
     if confirmation == "YES"
       begin
-        # Validate all paths first, checking against appropriate base path
+        # Validate all paths first - each item validates against its own root.
         validated_paths = []
         marked_items.each do |item|
           target_real = File.realpath(item[:path])
 
-          # Determine the correct base path based on source
+          # Determine the correct root path based on item source.
           if item[:source] == :github && gh_path_enabled?
-            base_real = File.realpath(gh_path_root)
+            root_real = File.realpath(gh_path_root)
           else
-            base_real = File.realpath(@base_path)
+            root_real = File.realpath(@base_path)
           end
 
-          unless target_real.start_with?(base_real + "/")
-            raise "Safety check failed: #{target_real} is not inside #{base_real}"
+          unless target_real.start_with?(root_real + "/")
+            raise "Safety check failed: #{target_real} is not inside #{root_real}"
           end
 
-          # Calculate relative path from base for deletion
-          relative_path = target_real.sub(base_real + "/", "")
-
-          validated_paths << {
-            path: target_real,
-            basename: item[:basename],
-            base_path: base_real,
-            relative_path: relative_path
-          }
+          validated_paths << { path: target_real, basename: item[:basename] }
         end
 
-        # Return delete action with all paths (each with its own base_path)
+        # Return delete action with fully validated absolute paths.
         @selected = { type: :delete, paths: validated_paths }
         names = validated_paths.map { |p| p[:basename] }.join(", ")
         @delete_status = "Deleted: {strike}#{names}{/strike}"
@@ -1152,6 +1147,7 @@ if __FILE__ == $0
         when 'CTRL-K', 'CTRLK' then keys << "\x0B"
         when 'CTRL-N', 'CTRLN' then keys << "\x0E"
         when 'CTRL-P', 'CTRLP' then keys << "\x10"
+        when 'CTRL-T', 'CTRLT' then keys << "\x14"
         when 'CTRL-W', 'CTRLW' then keys << "\x17"
         when /^TYPE=(.*)$/
           $1.each_char { |ch| keys << ch }
@@ -1357,18 +1353,8 @@ if __FILE__ == $0
   end
 
   def script_delete(paths)
-    # Group paths by base_path to handle items from different directories
-    grouped = paths.group_by { |item| item[:base_path] }
     cmds = []
-
-    grouped.each do |base_path, items|
-      cmds << "cd #{q(base_path)}"
-      items.each do |item|
-        # Use relative_path for deletion (works for both tries and GitHub repos)
-        cmds << "[[ -d #{q(item[:relative_path])} ]] && rm -rf #{q(item[:relative_path])}"
-      end
-    end
-
+    paths.each { |item| cmds << "[[ -d #{q(item[:path])} ]] && rm -rf #{q(item[:path])}" }
     cmds << "( cd #{q(Dir.pwd)} 2>/dev/null || cd \"$HOME\" )"
     cmds
   end

@@ -33,11 +33,11 @@ else
     fail "Ctrl-D + Enter + YES should generate delete script" "rm -rf command" "$output" "delete_spec.md#script-output-format"
 fi
 
-# Test: Delete script has cd to base dir
-if echo "$output" | grep -q "cd '.*' &&"; then
+# Test: Delete script uses absolute paths instead of cd-ing to base dir
+if echo "$output" | grep -q "\\[\\[ -d '/.*/2025-11-03-third'" && ! echo "$output" | grep -q "cd '$DEL_TEST_DIR' &&"; then
     pass
 else
-    fail "Delete script should cd to base dir" "cd 'path' &&" "$output" "delete_spec.md#script-components"
+    fail "Delete script should use absolute paths" "[[ -d '$DEL_TEST_DIR/name' ]]" "$output" "delete_spec.md#script-components"
 fi
 
 # Test: Delete script uses [[ -d 'name' ]] check
@@ -80,12 +80,12 @@ else
     pass
 fi
 
-# Test: Delete uses basename not full path in rm command
+# Test: Delete uses validated absolute path in rm command
 output=$(try_run --path="$DEL_TEST_DIR" --and-keys='CTRL-D,ENTER,Y,E,S,ENTER' exec 2>/dev/null)
-if echo "$output" | grep "rm -rf" | grep -q "rm -rf '2025-"; then
+if echo "$output" | grep "rm -rf" | grep -q "rm -rf '/.*/2025-11-03-third'"; then
     pass
 else
-    fail "Delete should use basename in rm -rf" "rm -rf 'name'" "$output" "delete_spec.md#per-item-delete-commands"
+    fail "Delete should use absolute path in rm -rf" "rm -rf '$DEL_TEST_DIR/name'" "$output" "delete_spec.md#per-item-delete-commands"
 fi
 
 # Cleanup
