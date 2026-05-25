@@ -135,6 +135,10 @@ try clone https://github.com/tobi/try.git my-fork
 # Shorthand syntax (no need to type 'clone')
 try https://github.com/tobi/try.git
 # Creates: 2025-08-27-tobi-try
+
+# Optional GitHub owner/repo layout
+TRY_GH_ROOT=~/github try clone https://github.com/tobi/try.git
+# Creates: ~/github/tobi/try
 ```
 
 Supported git URI formats:
@@ -144,6 +148,9 @@ Supported git URI formats:
 - `git@host.com:user/repo.git` (SSH other hosts)
 
 The `.git` suffix is automatically removed from URLs when generating directory names.
+
+Set `TRY_GH_ROOT` to clone `github.com` repositories into `$TRY_GH_ROOT/<owner>/<repo>`.
+`GH_PATH` is ignored because GitHub CLI uses it for the path to the `gh` binary.
 
 ### Keyboard Shortcuts
 

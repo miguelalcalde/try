@@ -175,17 +175,34 @@ module UI
 
 end
 
+# Root directory for GitHub clones in owner/repo layout.
+# Uses TRY_GH_ROOT, not GH_PATH, which GitHub CLI uses for the gh binary path.
+module TryGhRoot
+  ENV_KEY = 'TRY_GH_ROOT'
+
+  module_function
+
+  def enabled?
+    value = ENV[ENV_KEY]
+    value && !value.strip.empty?
+  end
+
+  def root
+    return nil unless enabled?
+
+    File.expand_path(ENV[ENV_KEY])
+  end
+end
+
 class TrySelector
   TRY_PATH = ENV['TRY_PATH'] || File.expand_path("~/src/tries")
 
   def gh_path_enabled?
-    env_val = ENV['GH_PATH']
-    env_val && !env_val.strip.empty?
+    TryGhRoot.enabled?
   end
 
   def gh_path_root
-    return nil unless gh_path_enabled?
-    File.expand_path(ENV['GH_PATH'])
+    TryGhRoot.root
   end
 
   def initialize(search_term = "", base_path: TRY_PATH, initial_input: nil, test_render_once: false, test_no_cls: false, test_keys: nil, test_confirm: nil)
@@ -208,7 +225,7 @@ class TrySelector
     @test_confirm = test_confirm
     @old_winch_handler = nil  # Store original SIGWINCH handler
     @needs_redraw = false
-    @source = :all  # :all, :tries, or :github (when GH_PATH enabled)
+    @source = :all  # :all, :tries, or :github (when TRY_GH_ROOT enabled)
 
     FileUtils.mkdir_p(@base_path) unless Dir.exist?(@base_path)
   end
@@ -300,7 +317,7 @@ class TrySelector
         end
       end
       
-      # Load GitHub source (if GH_PATH is set and not filtering to tries only)
+      # Load GitHub source (if TRY_GH_ROOT is set and not filtering to tries only)
       if gh_path_enabled? && @source != :tries
         gh_root = gh_path_root
         if gh_root && Dir.exist?(gh_root)
@@ -880,20 +897,35 @@ class TrySelector
 
     if confirmation == "YES"
       begin
-        base_real = File.realpath(@base_path)
-
-        # Validate all paths first
+        # Validate all paths first, checking against appropriate base path
         validated_paths = []
         marked_items.each do |item|
           target_real = File.realpath(item[:path])
+
+          # Determine the correct base path based on source
+          if item[:source] == :github && gh_path_enabled?
+            base_real = File.realpath(gh_path_root)
+          else
+            base_real = File.realpath(@base_path)
+          end
+
           unless target_real.start_with?(base_real + "/")
             raise "Safety check failed: #{target_real} is not inside #{base_real}"
           end
-          validated_paths << { path: target_real, basename: item[:basename] }
+
+          # Calculate relative path from base for deletion
+          relative_path = target_real.sub(base_real + "/", "")
+
+          validated_paths << {
+            path: target_real,
+            basename: item[:basename],
+            base_path: base_real,
+            relative_path: relative_path
+          }
         end
 
-        # Return delete action with all paths
-        @selected = { type: :delete, paths: validated_paths, base_path: base_real }
+        # Return delete action with all paths (each with its own base_path)
+        @selected = { type: :delete, paths: validated_paths }
         names = validated_paths.map { |p| p[:basename] }.join(", ")
         @delete_status = "Deleted: {strike}#{names}{/strike}"
         @all_tries = nil  # Clear cache
@@ -1032,13 +1064,11 @@ if __FILE__ == $0
   end
 
   def gh_path_enabled?
-    env_val = ENV['GH_PATH']
-    env_val && !env_val.strip.empty?
+    TryGhRoot.enabled?
   end
 
   def gh_path_root
-    return nil unless gh_path_enabled?
-    File.expand_path(ENV['GH_PATH'])
+    TryGhRoot.root
   end
 
   def generate_clone_directory_name(git_uri, custom_name = nil)
@@ -1055,7 +1085,7 @@ if __FILE__ == $0
     parsed = parse_git_uri(git_uri)
     return nil unless parsed
 
-    # If GH_PATH is set and this is a github.com URL, use GH_PATH structure
+    # If TRY_GH_ROOT is set and this is a github.com URL, use TRY_GH_ROOT structure
     if gh_path_enabled? && parsed[:host] == 'github.com'
       gh_root = gh_path_root
       owner = parsed[:user]
@@ -1263,7 +1293,7 @@ if __FILE__ == $0
 
     case result[:type]
     when :delete
-      script_delete(result[:paths], result[:base_path])
+      script_delete(result[:paths])
     when :mkdir
       script_mkdir_cd(result[:path])
     else
@@ -1304,7 +1334,7 @@ if __FILE__ == $0
 
   def script_clone(path, uri)
     parsed = parse_git_uri(uri)
-    # If GH_PATH is enabled and this is a github.com URL, use conditional clone
+    # If TRY_GH_ROOT is enabled and this is a github.com URL, use conditional clone
     if gh_path_enabled? && parsed && parsed[:host] == 'github.com'
       # Check if repo already exists, clone only if needed
       git_path = File.join(path, '.git')
@@ -1326,9 +1356,19 @@ if __FILE__ == $0
     ["mkdir -p #{q(path)}", "echo #{q(UI.expand_tokens("Using {b}git worktree{/b} to create this trial from #{src}."))}", worktree_cmd] + script_cd(path)
   end
 
-  def script_delete(paths, base_path)
-    cmds = ["cd #{q(base_path)}"]
-    paths.each { |item| cmds << "[[ -d #{q(item[:basename])} ]] && rm -rf #{q(item[:basename])}" }
+  def script_delete(paths)
+    # Group paths by base_path to handle items from different directories
+    grouped = paths.group_by { |item| item[:base_path] }
+    cmds = []
+
+    grouped.each do |base_path, items|
+      cmds << "cd #{q(base_path)}"
+      items.each do |item|
+        # Use relative_path for deletion (works for both tries and GitHub repos)
+        cmds << "[[ -d #{q(item[:relative_path])} ]] && rm -rf #{q(item[:relative_path])}"
+      end
+    end
+
     cmds << "( cd #{q(Dir.pwd)} 2>/dev/null || cd \"$HOME\" )"
     cmds
   end

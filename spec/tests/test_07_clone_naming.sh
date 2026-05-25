@@ -46,3 +46,20 @@ if echo "$output" | grep -q "git clone.*$TEST_TRIES"; then
 else
     fail "clone should specify target directory" "git clone ... path" "$output" "command_line.md#clone"
 fi
+
+# Test: TRY_GH_ROOT uses owner/repo layout for GitHub URLs
+TEST_GH_ROOT="$TEST_ROOT/github-root"
+output=$(TRY_GH_ROOT="$TEST_GH_ROOT" try_run --path="$TEST_TRIES" exec clone https://github.com/user/repo 2>&1)
+if echo "$output" | grep -q "cd '$TEST_GH_ROOT/user/repo'"; then
+    pass
+else
+    fail "TRY_GH_ROOT should use owner/repo clone destination" "cd '$TEST_GH_ROOT/user/repo'" "$output" "command_line.md#clone"
+fi
+
+# Test: GH_PATH is ignored because GitHub CLI uses it for the gh binary path
+output=$(GH_PATH="$TEST_GH_ROOT" try_run --path="$TEST_TRIES" exec clone https://github.com/user/repo 2>&1)
+if echo "$output" | grep -q "cd '$TEST_TRIES/" && ! echo "$output" | grep -q "$TEST_GH_ROOT/user/repo"; then
+    pass
+else
+    fail "GH_PATH should not affect clone destination" "date-prefixed path under TRY_PATH" "$output" "command_line.md#environment"
+fi

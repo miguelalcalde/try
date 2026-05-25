@@ -212,7 +212,7 @@ Tokens are preserved intact - never split a `{b}...{/b}` pair.
 | Enter | Select current entry |
 | Esc / Ctrl-C | Cancel selection |
 | Ctrl-D | Delete selected directory |
-| Ctrl-G | Toggle source between tries and GitHub (only when `GH_PATH` is set) |
+| Ctrl-G | Toggle source between tries and GitHub (only when `TRY_GH_ROOT` is set) |
 
 ### Line Editing (in search input)
 | Key | Action |
@@ -254,10 +254,10 @@ When query doesn't match any existing directory:
 
 ## Source Switching
 
-When `GH_PATH` environment variable is set, the TUI supports switching between two sources:
+When `TRY_GH_ROOT` environment variable is set, the TUI supports switching between two sources:
 
 - **Tries source** (default): Lists immediate subdirectories under the tries path
-- **GitHub source**: Lists repositories under `$GH_PATH/<owner>/<repo>` (2-level traversal)
+- **GitHub source**: Lists repositories under `$TRY_GH_ROOT/<owner>/<repo>` (2-level traversal)
 
 **Behavior:**
 - Press `Ctrl-G` to toggle between sources
