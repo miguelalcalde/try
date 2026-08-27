@@ -80,3 +80,12 @@
   - Creation time: `+ 2/√(days_since_created+1)`.
   - Last modified/accessed: `+ 3/√(hours_since_access+1)`.
 - Sorting: When no query, items are ordered by the time/date-influenced score; with a query, only matches with positive score appear, sorted descending.
+
+<!-- backlog-skill:agent-hint:start -->
+## Backlog
+
+Before starting work in this repository, read `.backlog/memory.md` for durable
+decisions, blockers, conventions, and gotchas. Check `.backlog/inbox.md` and
+open GitHub Issues for related or in-progress work. Prefer the `backlog` skill
+when capturing, promoting, refining, or planning tasks.
+<!-- backlog-skill:agent-hint:end -->
